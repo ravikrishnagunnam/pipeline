@@ -1,23 +1,28 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/banzaicloud/pipeline/model"
 	"github.com/casbin/casbin"
 	gormadapter "github.com/casbin/gorm-adapter"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // NewAuthorizer returns the MySQL based default authorizer
 func NewAuthorizer() gin.HandlerFunc {
-	a := gormadapter.NewAdapter("mysql", model.GetDataSource(""))
+	dbName := viper.GetString("database.dbname")
+	a := gormadapter.NewAdapter("mysql", model.GetDataSource(dbName), true)
 	e := casbin.NewEnforcer("authz_model.conf", a)
+	addDefaultPolicies(e, "bonifaido", 1)
+	if err := e.SavePolicy(); err != nil {
+		panic(err)
+	}
 	if err := e.LoadPolicy(); err != nil {
 		panic(err)
 	}
-	e.AddPolicy("bonifaido", "*", "*")
-	e.SavePolicy()
 	return newAuthorizer(e)
 }
 
@@ -58,4 +63,13 @@ func (a *BasicAuthorizer) RequirePermission(c *gin.Context) {
 	c.Writer.WriteHeader(403)
 	c.Writer.Write([]byte("403 Forbidden\n"))
 	c.Abort()
+}
+
+func addDefaultPolicies(e *casbin.Enforcer, username string, orgids ...int) {
+	e.AddPolicy("bonifaido", "/api/v1/orgs", "*")
+	e.AddPolicy("bonifaido", "/api/v1/token", "*") // DEPRECATED
+	e.AddPolicy("bonifaido", "/api/v1/tokens", "*")
+	for _, orgid := range orgids {
+		e.AddPolicy("bonifaido", fmt.Sprintf("/api/v1/orgs/%d/*", orgid), "*")
+	}
 }
