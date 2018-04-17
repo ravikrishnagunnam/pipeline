@@ -11,11 +11,8 @@ import (
 	"github.com/banzaicloud/pipeline/model/defaults"
 	"github.com/banzaicloud/pipeline/notify"
 	"github.com/banzaicloud/pipeline/utils"
-	"github.com/casbin/casbin"
-	gormadapter "github.com/casbin/gorm-adapter"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/qor/auth/auth_identity"
 	sessionManager "github.com/qor/session/manager"
 	"github.com/sirupsen/logrus"
@@ -97,12 +94,6 @@ func main() {
 
 	defaults.SetDefaultValues()
 
-	a := gormadapter.NewAdapter("mysql", model.GetDataSource("")) // Your driver and data source.
-	e := casbin.NewEnforcer("authz_model.conf", a)
-	if err := e.LoadPolicy(); err != nil {
-		panic(err)
-	}
-
 	router := gin.Default()
 
 	router.Use(cors.New(config.GetCORS()))
@@ -122,7 +113,7 @@ func main() {
 	v1 := router.Group("/api/v1/")
 	{
 		v1.Use(auth.Handler)
-		v1.Use(auth.NewAuthorizer(e))
+		v1.Use(auth.NewAuthorizer())
 		orgs := v1.Group("/orgs")
 		{
 			orgs.Use(api.OrganizationMiddleware)

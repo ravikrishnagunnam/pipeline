@@ -7,12 +7,24 @@ package auth
 import (
 	"net/http"
 
+	"github.com/banzaicloud/pipeline/model"
 	"github.com/casbin/casbin"
+	gormadapter "github.com/casbin/gorm-adapter"
 	"github.com/gin-gonic/gin"
 )
 
+// NewAuthorizer returns the MySQL based default authorizer
+func NewAuthorizer() gin.HandlerFunc {
+	a := gormadapter.NewAdapter("mysql", model.GetDataSource(""))
+	e := casbin.NewEnforcer("authz_model.conf", a)
+	if err := e.LoadPolicy(); err != nil {
+		panic(err)
+	}
+	return newAuthorizer(e)
+}
+
 // NewAuthorizer returns the authorizer, uses a Casbin enforcer as input
-func NewAuthorizer(e *casbin.Enforcer) gin.HandlerFunc {
+func newAuthorizer(e *casbin.Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		a := &BasicAuthorizer{enforcer: e}
 
