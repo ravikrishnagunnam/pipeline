@@ -108,6 +108,7 @@ func main() {
 	{
 		authGroup.GET("/*w", authHandler)
 		authGroup.GET("/*w/*w", authHandler)
+		authGroup.POST("/tokens", auth.GenerateToken)
 	}
 
 	v1 := router.Group("/api/v1/")

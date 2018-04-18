@@ -162,18 +162,40 @@ func Init() {
 //GenerateToken generates token from context
 // TODO: it should be possible to generate tokens via a token (not just session cookie)
 func GenerateToken(c *gin.Context) {
-	currentUser := GetCurrentUser(c.Request)
-	if currentUser == nil {
-		err := c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("Invalid session"))
-		log.Info(c.ClientIP(), err.Error())
-		return
+	var currentUser *User
+
+	if accessToken, ok := c.GetQuery("access_token"); ok {
+		githubUser, err := GetGithubUser(accessToken)
+		if err != nil {
+			err := c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("Invalid session"))
+			log.Info(c.ClientIP(), err.Error())
+			return
+		}
+		user := User{}
+		err = Auth.GetDB(c.Request).
+			Joins("left join auth_identities on users.id = auth_identities.user_id").
+			Where("auth_identities.uid = ?", githubUser.GetID()).
+			Find(&user).Error
+		if err != nil {
+			err := c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("Invalid session"))
+			log.Info(c.ClientIP(), err.Error())
+			return
+		}
+		currentUser = &user
+	} else {
+		currentUser = GetCurrentUser(c.Request)
+		if currentUser == nil {
+			err := c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("Invalid session"))
+			log.Info(c.ClientIP(), err.Error())
+			return
+		}
 	}
 
 	tokenRequest := struct {
 		Name string `json:"name,omitempty"`
 	}{Name: "generated"}
 
-	if c.Request.Method == http.MethodPost {
+	if c.Request.Method == http.MethodPost && c.Request.ContentLength > 0 {
 		if err := c.ShouldBindJSON(&tokenRequest); err != nil {
 			err := c.AbortWithError(http.StatusBadRequest, err)
 			log.Info(c.ClientIP(), err.Error())
