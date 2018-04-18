@@ -22,7 +22,7 @@ type GithubExtraInfo struct {
 
 //NewGithubAuthorizeHandler handler for Github auth
 func NewGithubAuthorizeHandler(provider *githubauth.GithubProvider) func(context *auth.Context) (*claims.Claims, error) {
-	log = logger.WithFields(logrus.Fields{"tag": "Auth"})
+	log := logger.WithFields(logrus.Fields{"tag": "Auth"})
 	return func(context *auth.Context) (*claims.Claims, error) {
 		var (
 			schema       auth.Schema
