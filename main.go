@@ -94,7 +94,8 @@ func main() {
 
 	defaults.SetDefaultValues()
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.LoggerWithWriter(gin.DefaultWriter, "/auth/tokens", "/auth/github/callback"), gin.Recovery())
 
 	router.Use(cors.New(config.GetCORS()))
 
